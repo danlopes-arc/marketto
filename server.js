@@ -13,6 +13,9 @@ mongoose.connect(process.env.MONGO_URI, {
 
 const app = express()
 
+app.use(express.json())
+app.use('/api/auth', require('./routes/api/auth'))
+
 app.get('/', (req, res) => {
   res.json({ success: true })
 })
