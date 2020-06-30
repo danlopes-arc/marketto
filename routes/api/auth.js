@@ -1,40 +1,97 @@
 const router = require('express').Router()
 const bcrypt = require('bcrypt')
+const chalk = require('chalk')
+const jwt = require('jsonwebtoken')
 const { isEmpty } = require('lodash')
 
 const User = require('../../models/User')
 
 router.post('/register', async (req, res) => {
 
-  let { name, email, password } = req.body
+  const user = req.body
 
-  name = (name || '').trim().replace(/ +/g, ' ')
-  email = (email || '').trim()
+  const name = (user.name || '').trim().replace(/ +/g, ' ')
+  const email = (user.email || '').trim()
+  const password = user.password
 
   const fields = {}
   if (!name) fields.name = 'Name is empty'
   if (!email) fields.email = 'Email is empty'
   if (!password) fields.password = 'Password is empty'
-  
+
+  if (!isEmpty(fields)) {
+    return res.status(400).json({ msg: 'Invalid input', fields })
+  }
+  try {
+    const user = await User.findOne({ email })
+    if (user) {
+      fields.email = 'Email already exists'
+      return res.status(409).json({ msg: fields.email, fields })
+    }
+
+    const hash = await bcrypt.hash(password, 12)
+
+    const newUser = await new User({
+      name,
+      email,
+      password: hash
+    }).save()
+    return res.sendStatus(201)
+
+  } catch (err) {
+    console.error(chalk.red('[server][error]', 'register user'))
+    console.error(chalk.red('[at]', __filename))
+    console.error(err)
+    return res.sendStatus(500)
+  }
+})
+
+router.post('/login', async (req, res) => {
+
+  const user = req.body
+
+  const email = (user.email || '').trim()
+  const password = user.password
+
+  const fields = {}
+  if (!email) fields.email = 'Email is empty'
+  if (!password) fields.password = 'Password is empty'
+
   if (!isEmpty(fields)) {
     return res.status(400).json({ msg: 'Invalid input', fields })
   }
 
-  const user = await User.findOne({ email })
-  if (user) {
-    fields.email = 'Email already exists'
-    return res.status(409).json({ msg: fields.email, fields})
+  try {
+    const user = await User.findOne({ email })
+    if (!user) {
+      fields.email = 'Email not found'
+      return res.status(404).json({ msg: fields.email, fields })
+    }
+
+    const matches = await bcrypt.compare(password, user.password)
+    if (!matches) {
+      fields.password = 'Wrong password'
+      return res.status(400).json({ msg: fields.password, fields })
+    }
+
+    jwt.sign(
+      { id: user.id },
+      process.env.JWT_SECRET,
+      { expiresIn: process.env.JWT_EXPIRE_SEC },
+      (err, token) => {
+
+        if (err) throw new Error('JWT sign error')
+
+        res.json({bearer: `Bearer ${token}`})
+      }
+    )
+
+  } catch (err) {
+    console.error(chalk.red('[server][error]', 'login user'))
+    console.error(chalk.red('[at]', __filename))
+    console.error(err)
+    return res.sendStatus(500)
   }
-
-  const hash = await bcrypt.hash(password, 12)
-
-  const newUser = await new User({
-    name,
-    email,
-    password: hash
-  }).save()
-
-  return res.sendStatus(201)
 })
 
 module.exports = router

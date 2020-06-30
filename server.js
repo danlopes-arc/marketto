@@ -1,7 +1,10 @@
 require('dotenv').config()
+process.env.JWT_EXPIRE_SEC = 3600
 
 const express = require('express')
 const mongoose = require('mongoose')
+const passport = require('passport')
+const chalk = require('chalk')
 
 mongoose.connect(process.env.MONGO_URI, {
     useUnifiedTopology: true,
@@ -9,11 +12,17 @@ mongoose.connect(process.env.MONGO_URI, {
     useCreateIndex: true
   })
   .then(() => console.log('[mongo] connected'))
-  .catch(err => console.error(err))
+  .catch(err => {
+    console.error(chalk.red('[mongo][error]', 'connect'))
+    console.error(err)
+  })
 
 const app = express()
 
 app.use(express.json())
+app.use(passport.initialize())
+require('./config/passport')(passport)
+
 app.use('/api/auth', require('./routes/api/auth'))
 
 app.get('/', (req, res) => {
