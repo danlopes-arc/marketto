@@ -21,7 +21,7 @@ const app = express()
 
 app.use(express.json())
 app.use(passport.initialize())
-require('./config/passport')(passport)
+require('./config/passport')
 
 app.use('/api/auth', require('./routes/api/auth'))
 
