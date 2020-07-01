@@ -2,6 +2,7 @@ const router = require('express').Router()
 const bcrypt = require('bcrypt')
 const chalk = require('chalk')
 const jwt = require('jsonwebtoken')
+const passport = require('passport')
 const { isEmpty } = require('lodash')
 
 const User = require('../../models/User')
@@ -74,17 +75,9 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ msg: fields.password, fields })
     }
 
-    jwt.sign(
-      { id: user.id },
-      process.env.JWT_SECRET,
-      { expiresIn: process.env.JWT_EXPIRE_SEC },
-      (err, token) => {
+    const bearerHeader = await jwtBearerHeader({ id: user.id })
 
-        if (err) throw new Error('JWT sign error')
-
-        res.json({bearer: `Bearer ${token}`})
-      }
-    )
+    return res.json(bearerHeader)
 
   } catch (err) {
     console.error(chalk.red('[server][error]', 'login user'))
@@ -93,5 +86,33 @@ router.post('/login', async (req, res) => {
     return res.sendStatus(500)
   }
 })
+
+router.post('/refresh', passport.authenticate('jwt', { session: false }),
+  async (req, res) => {
+    try {
+      const bearerHeader = await jwtBearerHeader({ id: req.user.id })
+      return res.json(bearerHeader)
+    } catch (err) {
+      console.error(chalk.red('[server][error]', 'auth refresh'))
+      console.error(chalk.red('[at]', __filename))
+      console.error(err)
+      return res.sendStatus(500)
+    }
+  }
+)
+
+const jwtBearerHeader = payload => {
+  return new Promise((resolve, reject) => {
+    jwt.sign(
+      payload,
+      process.env.JWT_SECRET,
+      { expiresIn: parseInt(process.env.JWT_EXPIRE_SEC) },
+      (err, token) => {
+        if (err) return reject(err)
+        return resolve({ bearer: `Bearer ${token}` })
+      }
+    )
+  })
+}
 
 module.exports = router
