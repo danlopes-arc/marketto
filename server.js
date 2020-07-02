@@ -24,6 +24,7 @@ app.use(passport.initialize())
 require('./config/passport')
 
 app.use('/api/auth', require('./routes/api/auth'))
+app.use('/api/products', require('./routes/api/products'))
 
 app.get('/', (req, res) => {
   res.json({ success: true })
