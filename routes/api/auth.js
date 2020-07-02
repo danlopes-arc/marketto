@@ -3,6 +3,7 @@ const bcrypt = require('bcrypt')
 const chalk = require('chalk')
 const jwt = require('jsonwebtoken')
 const passport = require('passport')
+const { stringfyAndTrim, logServerError } = require('../../helpers/helpers')
 const { isEmpty } = require('lodash')
 
 const User = require('../../models/User')
@@ -11,8 +12,8 @@ router.post('/register', async (req, res) => {
 
   const user = req.body
 
-  const name = (user.name || '').trim().replace(/ +/g, ' ')
-  const email = (user.email || '').trim()
+  const name = stringfyAndTrim(user.name).replace(/ +/g, ' ')
+  const email = stringfyAndTrim(user.email)
   const password = user.password
 
   const fields = {}
@@ -40,9 +41,7 @@ router.post('/register', async (req, res) => {
     return res.sendStatus(201)
 
   } catch (err) {
-    console.error(chalk.red('[server][error]', 'register user'))
-    console.error(chalk.red('[at]', __filename))
-    console.error(err)
+    logServerError(err, 'register user', __filename)
     return res.sendStatus(500)
   }
 })
@@ -80,9 +79,7 @@ router.post('/login', async (req, res) => {
     return res.json(bearerHeader)
 
   } catch (err) {
-    console.error(chalk.red('[server][error]', 'login user'))
-    console.error(chalk.red('[at]', __filename))
-    console.error(err)
+    logServerError(err, 'login user', __filename)
     return res.sendStatus(500)
   }
 })
@@ -93,9 +90,7 @@ router.post('/refresh', passport.authenticate('jwt', { session: false }),
       const bearerHeader = await jwtBearerHeader({ id: req.user.id })
       return res.json(bearerHeader)
     } catch (err) {
-      console.error(chalk.red('[server][error]', 'auth refresh'))
-      console.error(chalk.red('[at]', __filename))
-      console.error(err)
+      logServerError(err, 'auth refresh', __filename)
       return res.sendStatus(500)
     }
   }
