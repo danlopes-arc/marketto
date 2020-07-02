@@ -10,11 +10,9 @@ const User = require('../../models/User')
 
 router.post('/register', async (req, res) => {
 
-  const user = req.body
-
-  const name = stringfyAndTrim(user.name).replace(/ +/g, ' ')
-  const email = stringfyAndTrim(user.email)
-  const password = user.password
+  const name = stringfyAndTrim(req.body.name).replace(/ +/g, ' ')
+  const email = stringfyAndTrim(req.body.email)
+  const password = req.body.password
 
   const fields = {}
   if (!name) fields.name = 'Name is empty'
@@ -38,7 +36,7 @@ router.post('/register', async (req, res) => {
       email,
       password: hash
     }).save()
-    return res.sendStatus(201)
+    return res.send(201).json(newUser)
 
   } catch (err) {
     logServerError(err, 'register user', __filename)
@@ -48,10 +46,8 @@ router.post('/register', async (req, res) => {
 
 router.post('/login', async (req, res) => {
 
-  const user = req.body
-
-  const email = (user.email || '').trim()
-  const password = user.password
+  const email = stringfyAndTrim(req.body.email)
+  const password = req.body.password
 
   const fields = {}
   if (!email) fields.email = 'Email is empty'
